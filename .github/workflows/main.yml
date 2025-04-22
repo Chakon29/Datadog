@@ -50,7 +50,7 @@ jobs:
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-        TF_VAR_datadog_api_url: "https://api.datadoghq.eu/"
+        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
         TF_VAR_environment: ${{ github.head_ref == 'main' && 'prod' || 'dev' }}
       continue-on-error: true
 
@@ -85,5 +85,5 @@ jobs:
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-        TF_VAR_datadog_api_url: "https://api.datadoghq.eu/"
+        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
         TF_VAR_environment: 'prod'
