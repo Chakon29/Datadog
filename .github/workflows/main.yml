@@ -82,6 +82,6 @@ jobs:
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
       env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
+        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
+        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
         TF_VAR_environment: 'prod'
