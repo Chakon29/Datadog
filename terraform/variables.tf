@@ -33,3 +33,9 @@ variable "team_email" {
   type        = string
   default     = "vce923@gmail.com"
 }
+
+variable "response_time_threshold" {
+  description = "Umbral de tiempo de respuesta en milisegundos para alertas"
+  type        = number
+  default     = 500  # 500 ms por defecto
+}
