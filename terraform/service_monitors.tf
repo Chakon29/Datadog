@@ -22,7 +22,7 @@ EOT
   renotify_interval = 30
 
   include_tags = true
-  
+
   tags = [
     "service:${var.service_name}",
     "env:${var.environment}",
@@ -53,7 +53,7 @@ EOT
   renotify_interval = 60
 
   include_tags = true
-  
+
   tags = [
     "service:${var.service_name}",
     "env:${var.environment}",
