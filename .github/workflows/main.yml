@@ -16,6 +16,7 @@ jobs:
     defaults:
       run:
         working-directory: ./terraform
+
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
@@ -34,27 +35,19 @@ jobs:
       id: init
       run: terraform init
       env:
-        # Usar variables de entorno específicas para el proveedor Datadog
-        DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
-        DATADOG_APP_KEY: ${{ secrets.DATADOG_APP_KEY }}
-        # Mantener también las variables TF_VAR para otros usos
+        # Usar las API y App keys de la cuenta de servicio
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
 
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
-      env:
-        DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
-        DATADOG_APP_KEY: ${{ secrets.DATADOG_APP_KEY }}
 
     - name: Terraform Plan
       id: plan
       if: github.event_name == 'pull_request'
       run: terraform plan -no-color
       env:
-        DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
-        DATADOG_APP_KEY: ${{ secrets.DATADOG_APP_KEY }}
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
         TF_VAR_environment: ${{ github.head_ref == 'main' && 'prod' || 'dev' }}
@@ -89,8 +82,6 @@ jobs:
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
       env:
-        DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
-        DATADOG_APP_KEY: ${{ secrets.DATADOG_APP_KEY }}
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
         TF_VAR_environment: 'prod'
