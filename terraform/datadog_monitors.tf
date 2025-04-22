@@ -159,7 +159,7 @@ resource "datadog_synthetics_test" "retardo_alto" {
   
   assertion {
     type     = "responseTime"
-    operator = "<"
+    operator = "lessThan"  # Corregido: cambiado de "<" a "lessThan"
     target   = "6000"  
   }
   
