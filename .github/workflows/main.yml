@@ -36,8 +36,8 @@ jobs:
       run: terraform init
       env:
         # Usar las API y App keys de la cuenta de servicio
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
+        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
+        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY}}
 
     - name: Terraform Validate
       id: validate
