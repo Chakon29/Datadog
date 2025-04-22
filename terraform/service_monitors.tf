@@ -1,31 +1,35 @@
 # Monitor de disponibilidad del servicio
-resource "datadog_monitor" "respuesta_moderada" {
-  name               = "${var.service_name}-tiempo-respuesta-moderado-${var.environment}"
-  type               = "metric alert"
+resource "datadog_monitor" "service_availability" {
+  name               = "${var.service_name}-disponibilidad-${var.environment}"
+  type               = "service check"
   message            = <<EOT
-El sitio de prueba con retardo de 2 segundos está respondiendo más lento de lo esperado.
-Este monitor está diseñado para activarse cuando el tiempo de respuesta supera los 2.5 segundos.
+El servicio ${var.service_name} parece estar caído o inaccesible.
+Favor de revisar la infraestructura y los logs para identificar el problema.
+
 Notificación a: @${var.team_email}
 EOT
-  escalation_message = "El tiempo de respuesta sigue siendo elevado en la prueba de retardo de 2 segundos. @${var.team_email}"
+  escalation_message = "El servicio ${var.service_name} sigue sin responder. Se requiere atención urgente. @${var.team_email}"
 
-  # Consulta corregida - La anterior tenía una sintaxis de tag inválida
-  query = "avg(last_5m):avg:http.response_time{test_endpoint:delay_2s} > 2500"
+  query = "\"http.can_connect\".over(\"instance:${var.service_name}_status_check\").by(\"host\",\"url\").last(5).count_by_status()"
 
   monitor_thresholds {
-    critical = 2500
-    warning  = 2200
+    critical = 3
+    warning  = 2
   }
 
   notify_no_data    = true
-  renotify_interval = 60
+  no_data_timeframe = 10
+  renotify_interval = 30
 
+  include_tags = true
+  
   tags = [
-    "prueba:retardo-moderado",
+    "service:${var.service_name}",
     "env:${var.environment}",
     "managed-by:terraform"
   ]
 }
+
 # Monitor de tiempo de respuesta
 resource "datadog_monitor" "response_time" {
   name               = "${var.service_name}-tiempo-respuesta-${var.environment}"

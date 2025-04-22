@@ -122,7 +122,8 @@ Notificación a: @${var.team_email}
 EOT
   escalation_message = "El tiempo de respuesta sigue siendo elevado en la prueba de retardo de 2 segundos. @${var.team_email}"
 
-  query = "avg(last_5m):avg:http.response_time{url:httpstat.us/200?sleep=2000} > 2500"
+  # Consulta corregida - La anterior tenía una sintaxis de tag inválida
+  query = "avg(last_5m):avg:http.response_time{test_endpoint:delay_2s} > 2500"
 
   monitor_thresholds {
     critical = 2500
