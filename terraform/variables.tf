@@ -1,11 +1,11 @@
 variable "datadog_api_key" {
-  description = "API Key de Datadog asociada a la cuenta de servicio"
+  description = "API Key"
   type        = string
   sensitive   = true
 }
 
 variable "datadog_app_key" {
-  description = "Application Key de Datadog asociada a la cuenta de servicio"
+  description = "Application Key"
   type        = string
   sensitive   = true
 }
@@ -17,19 +17,19 @@ variable "datadog_api_url" {
 }
 
 variable "environment" {
-  description = "Entorno de despliegue (dev, test, prod)"
+  description = "Entorno de despliegue"
   type        = string
   default     = "dev"
 }
 
 variable "service_name" {
-  description = "Nombre del servicio que está siendo monitoreado"
+  description = "Nombre del servicio"
   type        = string
   default     = "mi-aplicacion"
 }
 
 variable "team_email" {
-  description = "Email del equipo para notificaciones"
+  description = "Email para notificaciones"
   type        = string
-  default     = "equipo@miempresa.com"
+  default     = "vce923@gmail.com"
 }
