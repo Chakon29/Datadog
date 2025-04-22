@@ -84,4 +84,4 @@ jobs:
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_APP_KEY }}
-        TF_VAR_environment: 'prod'
+        TF_VAR_environment: 'dev'
