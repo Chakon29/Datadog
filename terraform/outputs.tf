@@ -65,16 +65,6 @@ output "sitio_not_found_url" {
 }
 
 # Monitores de pruebas de tiempo de respuesta
-output "respuesta_moderada_monitor_id" {
-  description = "ID del monitor de tiempo de respuesta moderado (2s)"
-  value       = datadog_monitor.respuesta_moderada.id
-}
-
-output "respuesta_moderada_monitor_url" {
-  description = "URL del monitor de tiempo de respuesta moderado (2s)"
-  value       = "https://app.datadoghq.com/monitors/${datadog_monitor.respuesta_moderada.id}"
-}
-
 output "retardo_alto_test_id" {
   description = "ID del test sintético para el sitio con retardo alto (5s)"
   value       = datadog_synthetics_test.retardo_alto.id
