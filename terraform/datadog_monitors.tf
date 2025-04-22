@@ -19,7 +19,7 @@ resource "datadog_synthetics_test" "sitio_siempre_disponible" {
   locations = ["aws:eu-central-1", "aws:us-east-1"]
   status    = "live"
 
-  message = "Este test siempre debería pasar, ya que httpstat.us/200 siempre devuelve 200. Si falla, revisa tu conectividad. @${var.team_email}"
+  message = "Este test siempre debería pasar, ya que httpstat.us/200 siempre devuelve 200. Si falla, revisa tu conectividad. ${var.team_email}"
   tags    = ["prueba:disponibilidad", "env:${var.environment}", "managed-by:terraform"]
 
   options_list {
@@ -57,7 +57,7 @@ resource "datadog_synthetics_test" "sitio_siempre_indisponible" {
   locations = ["aws:eu-central-1"]
   status    = "live"
 
-  message = "Esta prueba está configurada para esperar un 503. Si pasa, tu monitor funciona correctamente. @${var.team_email}"
+  message = "Esta prueba está configurada para esperar un 503. Si pasa, tu monitor funciona correctamente. ${var.team_email}"
   tags    = ["prueba:indisponibilidad", "env:${var.environment}", "managed-by:terraform"]
 
   options_list {
@@ -94,7 +94,7 @@ resource "datadog_synthetics_test" "sitio_not_found" {
   locations = ["aws:eu-central-1"]
   status    = "live"
 
-  message = "Esta prueba está configurada para esperar un 404. Útil para simular recursos no encontrados. @${var.team_email}"
+  message = "Esta prueba está configurada para esperar un 404. Útil para simular recursos no encontrados. ${var.team_email}"
   tags    = ["prueba:not-found", "env:${var.environment}", "managed-by:terraform"]
 
   options_list {
@@ -118,9 +118,9 @@ resource "datadog_monitor" "respuesta_moderada" {
   message            = <<EOT
 El sitio de prueba con retardo de 2 segundos está respondiendo más lento de lo esperado.
 Este monitor está diseñado para activarse cuando el tiempo de respuesta supera los 2.5 segundos.
-Notificación a: @${var.team_email}
+Notificación a: ${var.team_email}
 EOT
-  escalation_message = "El tiempo de respuesta sigue siendo elevado en la prueba de retardo de 2 segundos. @${var.team_email}"
+  escalation_message = "El tiempo de respuesta sigue siendo elevado en la prueba de retardo de 2 segundos. ${var.team_email}"
 
   # Consulta corregida - La anterior tenía una sintaxis de tag inválida
   query = "avg(last_5m):avg:http.response_time{test_endpoint:delay_2s} > 2500"
@@ -167,7 +167,7 @@ resource "datadog_synthetics_test" "retardo_alto" {
   locations = ["aws:eu-central-1"]
   status    = "live"
 
-  message = "El sitio de prueba con retardo de 5 segundos está respondiendo más lento de lo esperado. @${var.team_email}"
+  message = "El sitio de prueba con retardo de 5 segundos está respondiendo más lento de lo esperado. ${var.team_email}"
   tags    = ["prueba:retardo-alto", "env:${var.environment}", "managed-by:terraform"]
 
   options_list {

@@ -6,9 +6,9 @@ resource "datadog_monitor" "service_availability" {
 El servicio ${var.service_name} parece estar caído o inaccesible.
 Favor de revisar la infraestructura y los logs para identificar el problema.
 
-Notificación a: @${var.team_email}
+Notificación a: ${var.team_email}
 EOT
-  escalation_message = "El servicio ${var.service_name} sigue sin responder. Se requiere atención urgente. @${var.team_email}"
+  escalation_message = "El servicio ${var.service_name} sigue sin responder. Se requiere atención urgente. ${var.team_email}"
 
   query = "\"http.can_connect\".over(\"instance:${var.service_name}_status_check\").by(\"host\",\"url\").last(5).count_by_status()"
 
@@ -36,11 +36,10 @@ resource "datadog_monitor" "response_time" {
   type               = "metric alert"
   message            = <<EOT
 El tiempo de respuesta del servicio ${var.service_name} es superior a ${var.response_time_threshold}ms.
-Esto puede afectar la experiencia de usuario.
 
-Notificación a: @${var.team_email}
+Notificación a: ${var.team_email}
 EOT
-  escalation_message = "El tiempo de respuesta sigue siendo elevado. Por favor, revisar urgentemente. @${var.team_email}"
+  escalation_message = "El tiempo de respuesta sigue siendo elevado. Por favor, revisar urgentemente. ${var.team_email}"
 
   query = "avg(last_5m):avg:http.response_time{service:${var.service_name},env:${var.environment}} > ${var.response_time_threshold}"
 

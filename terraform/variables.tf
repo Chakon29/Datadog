@@ -31,7 +31,7 @@ variable "service_name" {
 variable "team_email" {
   description = "Email para notificaciones"
   type        = string
-  default     = "vce923@gmail.com"
+  default     = "vicente.chacon@innfinit.com"
 }
 
 variable "response_time_threshold" {
