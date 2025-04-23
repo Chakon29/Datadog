@@ -63,7 +63,7 @@ resource "datadog_dashboard" "service_overview" {
       widget {
         manage_status_definition {
           summary_type    = "monitors"
-          display_format  = "counters"
+          display_format  = "counts"
           color_preference = "background"
           hide_zero_counts = true
           query           = "tag:(managed-by:terraform env:${var.environment} service:${var.service_name})"
