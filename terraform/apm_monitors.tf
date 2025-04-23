@@ -1,4 +1,4 @@
-# Monitor para tasa de errores APM
+
 resource "datadog_monitor" "apm_error_rate" {
   name               = "${var.service_name}-tasa-errores-${var.environment}"
   type               = "query alert"
@@ -29,9 +29,7 @@ EOT
   ]
 }
 
-# Monitor para latencia en endpoint /slow
 
-# Monitor para contador de peticiones
 resource "datadog_monitor" "request_count" {
   name               = "${var.service_name}-contador-peticiones-${var.environment}"
   type               = "query alert"
@@ -62,7 +60,6 @@ EOT
   ]
 }
 
-# Monitor para respuestas 404
 resource "datadog_monitor" "not_found_count" {
   name               = "${var.service_name}-contador-404-${var.environment}"
   type               = "query alert"
