@@ -40,7 +40,8 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La latencia del endpoint /slow sigue siendo alta. ${var.team_email}"
 
-  query = "avg(last_5m):avg:trace.flask.request{env:${var.environment},service:${var.service_name},resource_name:GET /slow}.as_rate() > ${var.response_time_threshold * 2}"
+  # Consulta corregida: usar avg:trace.flask.request{} sin as_rate()
+  query = "avg(last_5m):avg:trace.flask.request{env:${var.environment},service:${var.service_name},resource_name:GET /slow} > ${var.response_time_threshold * 2}"
 
   monitor_thresholds {
     critical = var.response_time_threshold * 2
