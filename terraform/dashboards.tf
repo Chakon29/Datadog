@@ -3,57 +3,6 @@ resource "datadog_dashboard" "service_overview" {
   description  = "Dashboard general de monitoreo para ${var.service_name} en ambiente ${var.environment}"
   layout_type  = "ordered"
 
-  widget {
-    group_definition {
-      layout_type = "ordered"
-      title       = "Estado de Disponibilidad del Servicio"
-
-      widget {
-        alert_graph_definition {
-          alert_id      = datadog_monitor.service_availability.id
-          viz_type      = "timeseries"
-          title         = "Estado de Disponibilidad"
-          live_span     = "1h"
-        }
-      }
-
-      widget {
-        alert_value_definition {
-          alert_id      = datadog_monitor.service_availability.id
-          title         = "Estado Actual"
-          precision     = 0
-          unit          = "auto"
-          text_align    = "center"
-        }
-      }
-    }
-  }
-
-  widget {
-    group_definition {
-      layout_type = "ordered"
-      title       = "Tiempo de Respuesta"
-
-      widget {
-        alert_graph_definition {
-          alert_id      = datadog_monitor.response_time.id
-          viz_type      = "timeseries"
-          title         = "Tiempo de Respuesta"
-          live_span     = "1h"
-        }
-      }
-
-      widget {
-        alert_value_definition {
-          alert_id      = datadog_monitor.response_time.id
-          title         = "Estado Actual"
-          precision     = 0
-          unit          = "auto"
-          text_align    = "center"
-        }
-      }
-    }
-  }
 
   widget {
     group_definition {
