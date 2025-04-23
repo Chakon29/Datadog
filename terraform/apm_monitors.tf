@@ -9,7 +9,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La tasa de errores sigue siendo alta. Por favor, revisar urgentemente. ${var.team_email}"
 
-  query = "sum(last_5m):100 * sum:trace.${var.service_name}.errors{env:${var.environment}} / sum:trace.${var.service_name}.hits{env:${var.environment}} > 5"
+  query = "sum(last_5m):100 * sum:trace.http.request.errors{env:${var.environment},service:${var.service_name}}.as_count() / sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count() > 5"
 
   monitor_thresholds {
     critical = 5
@@ -40,7 +40,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La latencia del endpoint /slow sigue siendo alta. ${var.team_email}"
 
-  query = "avg(last_5m):avg:trace.${var.service_name}.slow_request{env:${var.environment}} > ${var.response_time_threshold * 2}"
+  query = "avg(last_5m):avg:trace.http.request.duration{env:${var.environment},service:${var.service_name},resource_name:/slow} > ${var.response_time_threshold * 2}"
 
   monitor_thresholds {
     critical = var.response_time_threshold * 2
@@ -72,7 +72,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "Todavía no se reciben peticiones. Por favor, verificar si la aplicación está funcionando. ${var.team_email}"
 
-  query = "sum(last_5m):sum:trace.${var.service_name}.hits{env:${var.environment}} < 1"
+  query = "sum(last_5m):sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count() < 1"
 
   monitor_thresholds {
     critical = 1
@@ -103,7 +103,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "El número de respuestas 404 sigue siendo alto. ${var.team_email}"
 
-  query = "sum(last_5m):sum:trace.http.${var.service_name}.not_found_request.hits{env:${var.environment},http.status_code:404} > 10"
+  query = "sum(last_5m):sum:trace.http.request.hits{env:${var.environment},service:${var.service_name},http.status_code:404}.as_count() > 10"
 
   monitor_thresholds {
     critical = 10

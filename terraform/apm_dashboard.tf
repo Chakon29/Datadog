@@ -12,7 +12,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         timeseries_definition {
           title = "Tráfico total"
           request {
-            q            = "sum:trace.${var.service_name}.hits{env:${var.environment}} by {resource_name}.rollup(sum)"
+            q            = "sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count()"
             display_type = "bars"
             style {
               palette    = "dog_classic"
@@ -33,7 +33,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         timeseries_definition {
           title = "Errores"
           request {
-            q            = "sum:trace.${var.service_name}.errors{env:${var.environment}} by {resource_name}.rollup(sum)"
+            q            = "sum:trace.http.request.errors{env:${var.environment},service:${var.service_name}}.as_count()"
             display_type = "bars"
             style {
               palette    = "warm"
@@ -61,7 +61,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         timeseries_definition {
           title = "Latencia por Recurso"
           request {
-            q            = "avg:trace.${var.service_name}.index_request{env:${var.environment}} by {resource_name}"
+            q            = "avg:trace.http.request.duration{env:${var.environment},service:${var.service_name},resource_name:/} by {resource_name}"
             display_type = "line"
             style {
               palette    = "cool"
@@ -70,7 +70,7 @@ resource "datadog_dashboard" "apm_dashboard" {
             }
           }
           request {
-            q            = "avg:trace.${var.service_name}.slow_request{env:${var.environment}} by {resource_name}"
+            q            = "avg:trace.http.request.duration{env:${var.environment},service:${var.service_name},resource_name:/slow} by {resource_name}"
             display_type = "line"
             style {
               palette    = "warm"
@@ -86,7 +86,7 @@ resource "datadog_dashboard" "apm_dashboard" {
           }
           marker {
             display_type = "error dashed"
-            value        = "${var.response_time_threshold}"
+            value        = var.response_time_threshold
             label        = "Umbral crítico"
           }
           live_span = "1h"
@@ -97,7 +97,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         toplist_definition {
           title = "Endpoints más lentos"
           request {
-            q = "top(avg:trace.${var.service_name}.http.request{env:${var.environment}} by {resource_name}, 10, 'mean', 'desc')"
+            q = "top(avg:trace.http.request.duration{env:${var.environment},service:${var.service_name}} by {resource_name}, 10, 'mean', 'desc')"
             conditional_formats {
               comparator = "<"
               value      = var.response_time_threshold * 0.5
@@ -129,7 +129,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         timeseries_definition {
           title = "Códigos de estado por minuto"
           request {
-            q            = "sum:trace.${var.service_name}.hits{env:${var.environment}} by {http.status_code}.rollup(sum)"
+            q            = "sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}} by {http.status_code}.as_count()"
             display_type = "bars"
           }
           live_span = "1h"
@@ -140,7 +140,7 @@ resource "datadog_dashboard" "apm_dashboard" {
         query_value_definition {
           title = "Tasa de errores"
           request {
-            q          = "100 * sum:trace.${var.service_name}.errors{env:${var.environment}}.rollup(sum) / sum:trace.${var.service_name}.hits{env:${var.environment}}.rollup(sum)"
+            q          = "100 * sum:trace.http.request.errors{env:${var.environment},service:${var.service_name}}.as_count() / sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count()"
             aggregator = "avg"
             conditional_formats {
               comparator = "<"
@@ -174,25 +174,25 @@ resource "datadog_dashboard" "apm_dashboard" {
 
       widget {
         servicemap_definition {
-          service     = var.service_name
-          filters     = ["env:${var.environment}"]
-          title       = "Mapa de Servicio"
+          service   = var.service_name
+          filters   = ["env:${var.environment}"]
+          title     = "Mapa de Servicio"
         }
       }
 
       widget {
         trace_service_definition {
-          service     = var.service_name
-          env         = var.environment
-          span_name   = "default" # Specify the span name here
-          title       = "Análisis de APM"
-          live_span   = "1h"
-          display_format = "three_columns"
-          show_hits = true
-          show_errors = true
-          show_latency = true
-          show_breakdown = true
-          show_distribution = true
+          service            = var.service_name
+          env                = var.environment
+          span_name          = "default"
+          title              = "Análisis de APM"
+          live_span          = "1h"
+          display_format     = "three_column"
+          show_hits          = true
+          show_errors        = true
+          show_latency       = true
+          show_breakdown     = true
+          show_distribution  = true
           show_resource_list = true
         }
       }
