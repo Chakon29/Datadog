@@ -183,11 +183,4 @@ EOT
     prefix  = "service"
     defaults = [var.service_name]
   }
-
-  tags = [
-    "service:${var.service_name}",
-    "env:${var.environment}",
-    "managed-by:terraform",
-    "type:performance"
-  ]
 }

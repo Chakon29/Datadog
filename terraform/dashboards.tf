@@ -223,12 +223,6 @@ EOT
     prefix = "service"
     defaults = [var.service_name]
   }
-
-  tags = [
-    "service:${var.service_name}",
-    "env:${var.environment}",
-    "managed-by:terraform"
-  ]
 }
 
 # Recurso para un dashboard de SLOs si quieres expandirlo en el futuro
@@ -254,11 +248,4 @@ EOT
       tick_edge        = "left"
     }
   }
-
-  tags = [
-    "service:${var.service_name}",
-    "env:${var.environment}",
-    "managed-by:terraform",
-    "type:slo"
-  ]
 }
