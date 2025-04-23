@@ -40,8 +40,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La latencia del endpoint /slow sigue siendo alta. ${var.team_email}"
 
-  # Consulta corregida: usar avg:trace.flask.request{} sin as_rate()
-  query = "avg(last_5m):avg:trace.flask.request{env:${var.environment},service:${var.service_name},resource_name:GET /slow} > ${var.response_time_threshold * 2}"
+  query = "avg(last_5m):p95:trace.flask.request.duration{env:${var.environment},service:${var.service_name},resource_name:GET /slow} > ${var.response_time_threshold * 2}"
 
   monitor_thresholds {
     critical = var.response_time_threshold * 2
@@ -61,7 +60,6 @@ EOT
     "type:apm"
   ]
 }
-
 # Monitor para contador de peticiones
 resource "datadog_monitor" "request_count" {
   name               = "${var.service_name}-contador-peticiones-${var.environment}"
