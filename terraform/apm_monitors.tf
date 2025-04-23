@@ -1,4 +1,4 @@
-# Monitor para errores detectados por APM
+# Monitor para tasa de errores APM
 resource "datadog_monitor" "apm_error_rate" {
   name               = "${var.service_name}-tasa-errores-${var.environment}"
   type               = "query alert"
@@ -9,7 +9,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La tasa de errores sigue siendo alta. Por favor, revisar urgentemente. ${var.team_email}"
 
-  query = "sum(last_5m):100 * sum:trace.http.request.errors{env:${var.environment},service:${var.service_name}}.as_count() / sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count() > 5"
+  query = "sum(last_5m):100 * sum:trace.flask.request.errors{env:${var.environment},service:${var.service_name}}.as_count() / sum:trace.flask.request.hits{env:${var.environment},service:${var.service_name}}.as_count() > 5"
 
   monitor_thresholds {
     critical = 5
@@ -29,7 +29,7 @@ EOT
   ]
 }
 
-# Monitor para latencia en el endpoint /slow
+# Monitor para latencia en endpoint /slow
 resource "datadog_monitor" "slow_endpoint_latency" {
   name               = "${var.service_name}-latencia-endpoint-slow-${var.environment}"
   type               = "query alert"
@@ -40,7 +40,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "La latencia del endpoint /slow sigue siendo alta. ${var.team_email}"
 
-  query = "avg(last_5m):avg:trace.http.request.duration{env:${var.environment},service:${var.service_name},resource_name:/slow} > ${var.response_time_threshold * 2}"
+  query = "avg(last_5m):avg:trace.flask.request{env:${var.environment},service:${var.service_name},resource_name:GET /slow}.as_rate() > ${var.response_time_threshold * 2}"
 
   monitor_thresholds {
     critical = var.response_time_threshold * 2
@@ -61,7 +61,7 @@ EOT
   ]
 }
 
-# Monitor para el contador de peticiones
+# Monitor para contador de peticiones
 resource "datadog_monitor" "request_count" {
   name               = "${var.service_name}-contador-peticiones-${var.environment}"
   type               = "query alert"
@@ -72,7 +72,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "Todavía no se reciben peticiones. Por favor, verificar si la aplicación está funcionando. ${var.team_email}"
 
-  query = "sum(last_5m):sum:trace.http.request.hits{env:${var.environment},service:${var.service_name}}.as_count() < 1"
+  query = "sum(last_5m):sum:trace.flask.request.hits{env:${var.environment},service:${var.service_name}}.as_count() + sum:trace.express.request.hits{env:${var.environment},service:${var.service_name}}.as_count() < 1"
 
   monitor_thresholds {
     critical = 1
@@ -92,7 +92,7 @@ EOT
   ]
 }
 
-# Monitor para el endpoint que devuelve 404
+# Monitor para respuestas 404
 resource "datadog_monitor" "not_found_count" {
   name               = "${var.service_name}-contador-404-${var.environment}"
   type               = "query alert"
@@ -103,7 +103,7 @@ Notificación a: ${var.team_email}
 EOT
   escalation_message = "El número de respuestas 404 sigue siendo alto. ${var.team_email}"
 
-  query = "sum(last_5m):sum:trace.http.request.hits{env:${var.environment},service:${var.service_name},http.status_code:404}.as_count() > 10"
+  query = "sum(last_5m):sum:trace.flask.request.hits{env:${var.environment},service:${var.service_name},http.status_code:404}.as_count() + sum:trace.express.request.hits{env:${var.environment},service:${var.service_name},http.status_code:404}.as_count() > 10"
 
   monitor_thresholds {
     critical = 10
