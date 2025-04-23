@@ -30,36 +30,7 @@ EOT
 }
 
 # Monitor para latencia en endpoint /slow
-resource "datadog_monitor" "slow_endpoint_latency" {
-  name               = "${var.service_name}-latencia-endpoint-slow-${var.environment}"
-  type               = "query alert"
-  message            = <<EOT
-El endpoint /slow de ${var.service_name} está respondiendo más lento de lo esperado.
 
-Notificación a: ${var.team_email}
-EOT
-  escalation_message = "La latencia del endpoint /slow sigue siendo alta. ${var.team_email}"
-
-  query = "avg(last_5m):p95:trace.flask.request.duration{env:${var.environment},service:${var.service_name},resource_name:GET /slow} > ${var.response_time_threshold * 2}"
-
-  monitor_thresholds {
-    critical = var.response_time_threshold * 2
-    warning  = var.response_time_threshold * 1.5
-  }
-
-  notify_no_data    = false
-  renotify_interval = 60
-
-  include_tags = true
-
-  tags = [
-    "service:${var.service_name}",
-    "env:${var.environment}",
-    "endpoint:slow",
-    "managed-by:terraform",
-    "type:apm"
-  ]
-}
 # Monitor para contador de peticiones
 resource "datadog_monitor" "request_count" {
   name               = "${var.service_name}-contador-peticiones-${var.environment}"
