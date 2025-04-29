@@ -20,6 +20,29 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0 # Importante para tener acceso al historial completo
+
+    # Configuración de Git para manejar el estado
+    - name: Setup Git
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "actions@github.com"
+
+    # Verificar y crear rama para el estado si no existe
+    - name: Setup State Branch
+      run: |
+        if git ls-remote --heads origin terraform-state; then
+          echo "La rama terraform-state existe, recuperando estado..."
+          git fetch origin terraform-state
+          git checkout terraform-state -- .
+          mkdir -p terraform-state
+          cp terraform-state/terraform.tfstate* ./ || echo "No se encontraron archivos de estado"
+          git checkout ${{ github.ref_name }}
+        else
+          echo "La rama terraform-state no existe, se creará después del despliegue"
+          mkdir -p terraform-state
+        fi
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -86,3 +109,24 @@ jobs:
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
         TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
         TF_VAR_environment: 'prod'
+
+    # Guardar el estado de Terraform después de aplicar
+    - name: Save Terraform State
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        # Copiar archivos de estado
+        cp terraform.tfstate* terraform-state/ || echo "No hay archivos de estado para copiar"
+        
+        # Crear o cambiar a la rama de estado
+        git fetch origin terraform-state || echo "La rama aún no existe"
+        if git show-ref --verify --quiet refs/remotes/origin/terraform-state; then
+          git checkout terraform-state
+        else
+          git checkout -b terraform-state
+        fi
+        
+        # Añadir, commitear y pushear los cambios de estado
+        git add terraform-state/
+        git commit -m "Update Terraform state [skip ci]" || echo "No hay cambios en el estado"
+        git push origin terraform-state || echo "No se pudo pushear el estado, intentando con --force"
+        git push --force origin terraform-state
