@@ -3,12 +3,9 @@ resource "datadog_monitor" "VM_GCP_Uso_de_cpu_Anomal" {
   require_full_window = false
   monitor_thresholds {
     critical = 0.6
-    critical_recovery = 0.3  # Cambiado de 0 a 0.3 para evitar superposición
+    critical_recovery = 0.3
   }
-  monitor_threshold_windows {
-    recovery_window = "last_15m"
-    trigger_window = "last_1h"
-  }
+
   name = "[VM GCP] Uso de cpu :: Anomal"
   type = "query alert"
   query = <<EOT
@@ -24,7 +21,6 @@ Detalles:
 - Timestamp: {{last_triggered_at}}
 EOT
   
-  # Etiquetas para mantener consistencia
   tags = [
     "type:vm",
     "env:${var.environment}",
