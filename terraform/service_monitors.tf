@@ -17,20 +17,11 @@ EOT
   message = <<EOT
 @team-teleton 
 ALERTA: Anomalia en uso de CPU en {{host.name}} - {{value}}% 
+
 Detalles:
 - Host: {{host.name}}
 - CPU usado: {{value}} %
 - Proyecto: ancient-tractor-452505-b5
 - Timestamp: {{last_triggered_at}}
 EOT
-  
-  # Etiquetas para mantener consistencia
-  tags = [
-    "type:vm",
-    "env:${var.environment}",
-    "managed-by:terraform",
-    "provider:gcp"
-  ]
-  
-  include_tags = true
 }
