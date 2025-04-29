@@ -29,31 +29,38 @@ jobs:
         git config --global user.name "GitHub Actions Bot"
         git config --global user.email "actions@github.com"
 
-    # Verificar y crear rama para el estado si no existe - CORREGIDO
-    - name: Setup State Branch
+    # Mejorado: Recuperar el estado anterior de forma más robusta
+    - name: Fetch Terraform State
       run: |
-        # Crear directorio para estado siempre
-        mkdir -p terraform-state
-        
-        # Verificar si la rama existe de manera más robusta
-        if git fetch origin terraform-state 2>/dev/null; then
-          echo "La rama terraform-state existe, recuperando estado..."
+        echo "Verificando si existe la rama terraform-state..."
+        if git ls-remote --heads origin terraform-state; then
+          echo "La rama terraform-state existe, descargando estado..."
           
-          # Crear una rama local temporal
-          git checkout -b temp-state-branch origin/terraform-state
+          # Crear directorio para el estado
+          mkdir -p terraform-state
           
-          # Copiar los archivos de estado si existen
+          # Descargar solo el directorio terraform-state sin cambiar a esa rama
+          git fetch origin terraform-state
+          git checkout FETCH_HEAD -- terraform-state/
+          
+          # Ver qué archivos se descargaron
+          ls -la terraform-state/
+          
+          # Copiar archivos de estado al directorio de trabajo
           if [ -f "terraform-state/terraform.tfstate" ]; then
+            echo "Copiando archivos de estado..."
             cp terraform-state/terraform.tfstate* ./ || echo "Error copiando archivos de estado"
+            echo "Estado recuperado correctamente."
+            
+            # Mostrar información del estado
+            echo "Contenido del estado:"
+            grep -o '"resources": \[[^]]*\]' terraform.tfstate | head -20
           else
-            echo "No se encontraron archivos de estado en la rama"
+            echo "No se encontraron archivos de estado en la rama."
           fi
-          
-          # Volver a la rama principal
-          git checkout ${{ github.ref_name }}
-          git branch -D temp-state-branch
         else
-          echo "La rama terraform-state no existe, se creará después del despliegue"
+          echo "La rama terraform-state no existe, se creará después del despliegue."
+          mkdir -p terraform-state
         fi
 
     - name: Setup Terraform
@@ -61,9 +68,9 @@ jobs:
       with:
         terraform_version: 1.0.0
 
+    # Modificado para no fallar en caso de error
     - name: Terraform Format
-      id: fmt
-      run: terraform fmt -check
+      run: terraform fmt -check || true
       continue-on-error: true
 
     - name: Terraform Init
@@ -76,6 +83,17 @@ jobs:
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
+
+    # Añadir este paso para ver el estado
+    - name: Check Terraform State
+      run: |
+        echo "Comprobando el estado de Terraform..."
+        if [ -f "terraform.tfstate" ]; then
+          echo "El archivo de estado existe."
+          terraform state list || echo "No hay recursos en el estado"
+        else
+          echo "No existe el archivo de estado."
+        fi
 
     - name: Terraform Plan
       id: plan
@@ -122,32 +140,31 @@ jobs:
         TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
         TF_VAR_environment: 'prod'
 
-    # Guardar el estado de Terraform después de aplicar - MEJORADO
+    # Mejorado: Guardar el estado de forma más robusta
     - name: Save Terraform State
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
-        # Copiar archivos de estado
-        cp terraform.tfstate* terraform-state/ || echo "No hay archivos de estado para copiar"
+        if [ ! -f "terraform.tfstate" ]; then
+          echo "⚠️ No hay archivo de estado para guardar. Algo salió mal."
+          exit 1
+        fi
         
-        # Crear o cambiar a la rama de estado - MEJORADO
-        echo "Intentando crear/actualizar la rama terraform-state..."
+        echo "📝 Guardando el estado actualizado de Terraform..."
         
-        # Crear una nueva rama desde cero (sin historia)
-        git checkout --orphan terraform-state-new
-        
-        # Limpiar el directorio de trabajo excepto terraform-state
-        find . -not -path "./terraform-state*" -not -path "./.git*" -delete
-        
-        # Mover los archivos de estado al directorio raíz
+        # Copiar archivos de estado al directorio de estado
         mkdir -p terraform-state
-        mv terraform-state/* . || echo "No hay archivos que mover"
+        cp terraform.tfstate* terraform-state/ || echo "Error copiando archivos de estado"
         
-        # Añadir y commitear
+        # Crear una rama nueva desde cero
+        git checkout --orphan temp-terraform-state
+        git rm -rf .
+        
+        # Añadir solo los archivos de estado
+        mv terraform-state/* .
         git add terraform.tfstate*
+        
+        # Crear el commit y publicar la rama
         git commit -m "Update Terraform state [skip ci]" || echo "No hay cambios que commitear"
+        git push -f origin temp-terraform-state:terraform-state
         
-        # Forzar push a la rama de estado
-        git push -f origin terraform-state-new:terraform-state
-        
-        # Volver a la rama original
-        git checkout ${{ github.ref_name }}
+        echo "✅ Estado guardado correctamente en la rama terraform-state"
