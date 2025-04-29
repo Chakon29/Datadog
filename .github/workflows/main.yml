@@ -33,33 +33,38 @@ jobs:
     - name: Fetch Terraform State
       run: |
         echo "Verificando si existe la rama terraform-state..."
-        if git ls-remote --heads origin terraform-state; then
-          echo "La rama terraform-state existe, descargando estado..."
+        
+        # Primero intentar hacer fetch para verificar si realmente existe
+        if git fetch origin terraform-state:terraform-state-temp 2>/dev/null; then
+          echo "La rama terraform-state existe y es accesible."
+          
+          # Ahora podemos trabajar con la rama local
+          git checkout terraform-state-temp
           
           # Crear directorio para el estado
           mkdir -p terraform-state
           
-          # Descargar solo el directorio terraform-state sin cambiar a esa rama
-          git fetch origin terraform-state
-          git checkout FETCH_HEAD -- terraform-state/
-          
-          # Ver qué archivos se descargaron
-          ls -la terraform-state/
-          
-          # Copiar archivos de estado al directorio de trabajo
-          if [ -f "terraform-state/terraform.tfstate" ]; then
+          # Verificar si hay archivos de estado
+          if [ -f "terraform.tfstate" ]; then
             echo "Copiando archivos de estado..."
-            cp terraform-state/terraform.tfstate* ./ || echo "Error copiando archivos de estado"
+            cp terraform.tfstate* terraform-state/
+            git checkout ${{ github.ref_name }}
+            cp terraform-state/terraform.tfstate* ./
             echo "Estado recuperado correctamente."
             
             # Mostrar información del estado
             echo "Contenido del estado:"
-            grep -o '"resources": \[[^]]*\]' terraform.tfstate | head -20
+            grep -o '"resources": \[[^]]*\]' terraform.tfstate | head -20 || echo "No se pudo examinar el contenido del estado"
           else
             echo "No se encontraron archivos de estado en la rama."
+            git checkout ${{ github.ref_name }}
           fi
+          
+          # Limpiar la rama temporal
+          git branch -D terraform-state-temp
         else
-          echo "La rama terraform-state no existe, se creará después del despliegue."
+          echo "La rama terraform-state no existe o no es accesible."
+          echo "Se creará una nueva rama de estado después del despliegue."
           mkdir -p terraform-state
         fi
 
