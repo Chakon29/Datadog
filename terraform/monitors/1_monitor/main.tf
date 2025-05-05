@@ -1,4 +1,4 @@
-resource "datadog_monitor" "VM_GCP_Uso_de_disco_Critical 111" {
+resource "datadog_monitor" "VM_GCP_Uso_de_disco_Critical_111" {
   include_tags = false
   new_group_delay = 60
   notify_audit = true
