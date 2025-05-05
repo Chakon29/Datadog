@@ -22,5 +22,5 @@ module "monitor_1" {
    providers = {
      datadog = datadog
    }
-   monitor_params = var.monitor_parametros[0]
+   monitor_params = var.monitor_parametros[1]
  }
