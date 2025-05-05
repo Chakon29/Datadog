@@ -16,7 +16,7 @@ import {
   id = "36164091"
 }
 
-module "monitor_1" {
+module "monitor_2" {
   source = "./monitors/2_monitor"
   providers = {
     datadog = datadog
