@@ -128,12 +128,6 @@ jobs:
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
         TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
 
-    - name: Fix Import in Main.tf
-      run: |
-        # Comenta todo el bloque import para prevenir errores
-        sed -i '/^[[:space:]]*import/,/^[[:space:]]*}/ s/^/#/' main.tf
-        cat main.tf
-
     - name: Plan
       id: plan
       run: |
