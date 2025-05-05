@@ -9,47 +9,16 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      create_monitor:
-        description: 'Crear nuevo monitor'
-        required: false
-        default: false
-        type: boolean
-      monitor_number:
-        description: 'Número del nuevo monitor'
-        required: false
-        type: string
-      monitor_name:
-        description: 'Nombre del recurso para el nuevo monitor'
-        required: false
-        type: string
-      monitor_title:
-        description: 'Título para el nuevo monitor'
-        required: false
-        type: string
-      monitor_query:
-        description: 'Query para el nuevo monitor'
-        required: false
-        type: string
-      critical_threshold:
-        description: 'Valor crítico para el nuevo monitor'
-        required: false
-        default: '90'
-        type: string
-      warning_threshold:
-        description: 'Valor de advertencia para el nuevo monitor'
-        required: false
-        default: '80'
-        type: string
       import_monitor:
         description: 'Importar monitor existente'
         required: false
         default: false
         type: boolean
-      import_monitor_number:
-        description: 'Número del monitor a importar'
+      monitor_resource_path:
+        description: 'Ruta al recurso (ej: module.monitor_1.datadog_monitor.VM_GCP_Uso_de_disco_Critical)'
         required: false
         type: string
-      import_monitor_id:
+      monitor_id:
         description: 'ID real del monitor en Datadog a importar'
         required: false
         type: string
@@ -58,126 +27,8 @@ env:
   INFRA_PARAMETERS: "monitors.tfvars"
   MAX_RETRIES: 5
   RETRY_INTERVAL: 30
-  PROJECT_ID: "ancient-tractor-452505-b5"
 
 jobs:
-  create_monitor:
-    name: 'Crear Nuevo Monitor'
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.create_monitor == 'true' }}
-    defaults:
-      run:
-        working-directory: ./terraform
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    
-    - name: Crear Estructura para Nuevo Monitor
-      run: |
-        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
-        MONITOR_NAME="${{ github.event.inputs.monitor_name }}"
-        MONITOR_TITLE="${{ github.event.inputs.monitor_title }}"
-        MONITOR_QUERY="${{ github.event.inputs.monitor_query }}"
-        CRITICAL="${{ github.event.inputs.critical_threshold }}"
-        WARNING="${{ github.event.inputs.warning_threshold }}"
-        
-        # Crear directorio para el nuevo monitor
-        mkdir -p "./monitors/${MONITOR_NUM}_monitor"
-        
-        # Copiar archivos base del primer monitor
-        cp ./monitors/1_monitor/variables.tf "./monitors/${MONITOR_NUM}_monitor/"
-        cp ./monitors/1_monitor/provider.tf "./monitors/${MONITOR_NUM}_monitor/"
-        cp ./monitors/1_monitor/output.tf "./monitors/${MONITOR_NUM}_monitor/"
-      
-    - name: Crear Archivo main.tf
-      run: |
-        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
-        MONITOR_NAME="${{ github.event.inputs.monitor_name }}"
-        MONITOR_TITLE="${{ github.event.inputs.monitor_title }}"
-        MONITOR_QUERY="${{ github.event.inputs.monitor_query }}"
-        CRITICAL="${{ github.event.inputs.critical_threshold }}"
-        WARNING="${{ github.event.inputs.warning_threshold }}"
-        PROJECT_ID="${{ env.PROJECT_ID }}"
-        
-        # Escribir el contenido línea por línea
-        echo 'resource "datadog_monitor" "'$MONITOR_NAME'" {' > "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  include_tags = false' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  new_group_delay = 60' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  notify_audit = true' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  require_full_window = false' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  monitor_thresholds {' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '    critical = '$CRITICAL >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '    warning = '$WARNING >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  }' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  name = "'$MONITOR_TITLE'"' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  type = "query alert"' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  query = <<EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo "$MONITOR_QUERY" >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo 'EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '  message = <<EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '@team-teleton ' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo 'ALERTA: '$MONITOR_TITLE' en {{host.name}} - {{value}}%' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo 'Detalles:' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '- Host: {{host.name}}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '- Valor: {{value}}%' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '- Proyecto: '$PROJECT_ID >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '- Timestamp: {{last_triggered_at}}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo 'EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo '}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        
-        cat "./monitors/${MONITOR_NUM}_monitor/main.tf"
-    
-    - name: Actualizar monitors.tfvars
-      run: |
-        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
-        # Crear archivo temporal
-        echo 'monitor_params = [' > monitors.tfvars.new
-        # Extraer los monitores existentes del archivo original
-        grep -o '{[^}]*}' monitors.tfvars | while read line; do
-          echo "	$line," >> monitors.tfvars.new
-        done
-        # Añadir el nuevo monitor
-        echo '	{' >> monitors.tfvars.new
-        echo '		"monitor_id":"'$MONITOR_NUM'",' >> monitors.tfvars.new
-        echo '		"monitor_path": "./monitors/'$MONITOR_NUM'_monitor/main.tf"' >> monitors.tfvars.new
-        echo '	}' >> monitors.tfvars.new
-        echo '    ]' >> monitors.tfvars.new
-        # Reemplazar el archivo original
-        mv monitors.tfvars.new monitors.tfvars
-        
-        cat monitors.tfvars
-    
-    - name: Actualizar main.tf
-      run: |
-        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
-        # Añadir el nuevo módulo al final del archivo
-        echo '' >> main.tf
-        echo 'module "monitor_'$MONITOR_NUM'" {' >> main.tf
-        echo '	source = "./monitors/'$MONITOR_NUM'_monitor"' >> main.tf
-        echo '	providers = {' >> main.tf
-        echo '		datadog = datadog' >> main.tf
-        echo '	}' >> main.tf
-        echo '	monitor_params = [var.monitor_params['$(($MONITOR_NUM - 1))']' >> main.tf
-        echo '}' >> main.tf
-        
-        cat main.tf
-    
-    - name: Configurar Git
-      run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-    
-    - name: Commit y Push de los cambios
-      run: |
-        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
-        git add "./monitors/${MONITOR_NUM}_monitor/" monitors.tfvars main.tf
-        git commit -m "Añadir monitor ${MONITOR_NUM}: ${{ github.event.inputs.monitor_title }}"
-        git push origin ${GITHUB_REF#refs/heads/}
-
   import_monitor:
     name: 'Importar Monitor Existente'
     runs-on: ubuntu-latest
@@ -207,15 +58,12 @@ jobs:
     
     - name: Importar Monitor Existente
       run: |
-        MONITOR_NUM="${{ github.event.inputs.import_monitor_number }}"
-        MONITOR_ID="${{ github.event.inputs.import_monitor_id }}"
+        RESOURCE_PATH="${{ github.event.inputs.monitor_resource_path }}"
+        MONITOR_ID="${{ github.event.inputs.monitor_id }}"
         
-        # Obtener el nombre del recurso del monitor desde main.tf
-        RESOURCE_NAME=$(grep -o "datadog_monitor\.[^ ]*" "./monitors/${MONITOR_NUM}_monitor/main.tf" | sed 's/datadog_monitor\.//')
+        echo "Importando monitor con ID: ${MONITOR_ID} al recurso ${RESOURCE_PATH}..."
         
-        echo "Importando monitor ${MONITOR_NUM} (ID: ${MONITOR_ID}) al recurso ${RESOURCE_NAME}..."
-        
-        terraform import -var-file=${{ env.INFRA_PARAMETERS }} module.monitor_${MONITOR_NUM}.datadog_monitor.${RESOURCE_NAME} ${MONITOR_ID}
+        terraform import -var-file=${{ env.INFRA_PARAMETERS }} ${RESOURCE_PATH} ${MONITOR_ID}
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
@@ -224,8 +72,8 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
-    needs: [create_monitor, import_monitor]
-    if: ${{ always() && (needs.create_monitor.result == 'success' || needs.create_monitor.result == 'skipped') && (needs.import_monitor.result == 'success' || needs.import_monitor.result == 'skipped') }}
+    needs: [import_monitor]
+    if: ${{ always() && (needs.import_monitor.result == 'success' || needs.import_monitor.result == 'skipped') }}
     defaults:
       run:
         working-directory: ./terraform
@@ -279,6 +127,12 @@ jobs:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
         TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
+
+    - name: Fix Import in Main.tf
+      run: |
+        # Comment out any import blocks to prevent errors with non-existent resources
+        sed -i 's/^import/# import/' main.tf
+        cat main.tf
 
     - name: Plan
       id: plan
