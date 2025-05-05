@@ -1,0 +1,28 @@
+variable "monitor_params" {
+  type = object({
+    monitor_id = optional(string)
+    monitor_path = optional(string)
+    name_cm = optional(string)
+    monitor_type = optional(string)
+    monitor_msg = optional(string)
+    monitor_query = optional(string)
+    critical_value = optional(number)
+    warning_value = optional(number)
+    criticalr_value = optional(number)
+    trigg_w = optional(string)
+    rec_w = optional(string)
+    renotify_interval = optional(number)
+    new_group_delay = optional(number)
+    monitor_tags = optional(list(string))
+    no_data_fr = optional(number)
+    include_tags = optional(bool)
+    monitor_renotify_s = optional(list(string))
+    monitor_renotify_o = optional(number)
+    monitor_notify_nodata = optional(bool)
+    monitor_timeout_h = optional(number)
+    monitor_on_missing_data = optional(string)
+    monitor_enable_logs_sample = optional(bool)
+    groupby_simple_monitor = optional(bool)
+  })
+  default = null
+}
