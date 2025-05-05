@@ -1,4 +1,4 @@
-resource "datadog_monitor" "VM_GCP_Uso_de_disco_Critical" {
+resource "datadog_monitor" "VM_GCP_Uso_de_disco_Critical 111" {
   include_tags = false
   new_group_delay = 60
   notify_audit = true
@@ -7,7 +7,7 @@ resource "datadog_monitor" "VM_GCP_Uso_de_disco_Critical" {
     critical = 90
     warning = 80
   }
-  name = "[VM GCP] Uso de disco :: Critical"
+  name = "[VM GCP] Uso de disco :: Critical 111"
   type = "query alert"
   query = <<EOT
 avg(last_5m):100 * ( max:system.disk.used{project:ancient-tractor-452505-b5} by {host} / max:system.disk.total{project:ancient-tractor-452505-b5} by {host} ) > 90
