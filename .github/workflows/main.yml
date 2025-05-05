@@ -130,8 +130,8 @@ jobs:
 
     - name: Fix Import in Main.tf
       run: |
-        # Comment out any import blocks to prevent errors with non-existent resources
-        sed -i 's/^import/# import/' main.tf
+        # Comenta todo el bloque import para prevenir errores
+        sed -i '/^[[:space:]]*import/,/^[[:space:]]*}/ s/^/#/' main.tf
         cat main.tf
 
     - name: Plan
