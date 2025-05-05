@@ -7,5 +7,5 @@ module "monitor_1" {
 	providers = {
 		datadog = datadog
 	}
-	monitor_params = var.monitor_params[0]  # Note the [0] index here
+	monitor_params = var.monitor_parametros[0]  # Note the [0] index here
 }
