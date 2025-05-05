@@ -93,40 +93,47 @@ jobs:
         cp ./monitors/1_monitor/output.tf "./monitors/${MONITOR_NUM}_monitor/"
         
         # Crear el archivo main.tf para el nuevo monitor
-        cat > "./monitors/${MONITOR_NUM}_monitor/main.tf" << EOF
-resource "datadog_monitor" "${MONITOR_NAME}" {
+        cat > "./monitors/${MONITOR_NUM}_monitor/main.tf" << 'EOF'
+resource "datadog_monitor" "$MONITOR_NAME" {
   include_tags = false
   new_group_delay = 60
   notify_audit = true
   require_full_window = false
   monitor_thresholds {
-    critical = ${CRITICAL}
-    warning = ${WARNING}
+    critical = $CRITICAL
+    warning = $WARNING
   }
-  name = "${MONITOR_TITLE}"
+  name = "$MONITOR_TITLE"
   type = "query alert"
   query = <<EOT
-${MONITOR_QUERY}
+$MONITOR_QUERY
 EOT
   message = <<EOT
 @team-teleton 
-ALERTA: ${MONITOR_TITLE} en {{host.name}} - {{value}}%
+ALERTA: $MONITOR_TITLE en {{host.name}} - {{value}}%
 
 Detalles:
 - Host: {{host.name}}
 - Valor: {{value}}%
-- Proyecto: ${PROJECT_ID}
+- Proyecto: $PROJECT_ID
 - Timestamp: {{last_triggered_at}}
 EOT
 }
 EOF
+
+        # Reemplazar variables en el archivo generado
+        sed -i "s/\$MONITOR_NAME/${MONITOR_NAME}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        sed -i "s/\$CRITICAL/${CRITICAL}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        sed -i "s/\$WARNING/${WARNING}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        sed -i "s/\$MONITOR_TITLE/${MONITOR_TITLE}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        sed -i "s/\$MONITOR_QUERY/${MONITOR_QUERY}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        sed -i "s/\$PROJECT_ID/${PROJECT_ID}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
         
         # Actualizar monitors.tfvars para incluir el nuevo monitor
         # Primero respaldamos el archivo
         cp monitors.tfvars monitors.tfvars.bak
         
         # Extraer el contenido actual y reformatearlo con el nuevo monitor
-        content=$(cat monitors.tfvars)
         echo 'monitor_params = [' > monitors.tfvars
         
         # Añadir los monitores existentes
