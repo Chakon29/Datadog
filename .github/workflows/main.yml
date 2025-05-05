@@ -1,4 +1,4 @@
-name: 'Datadog Terraform CI/CD con Terraformer'
+name: 'Datadog Terraform CI/CD'
 
 on:
   push:
@@ -8,21 +8,12 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      import_resources:
-        description: 'Importar recursos con Terraformer'
-        required: false
-        default: 'no'
-      resource_type:
-        description: 'Tipo de recurso (monitor, dashboard, synthetics)'
-        required: false
-        default: 'monitor'
-      filter_id:
-        description: 'ID específico para importar (opcional)'
-        required: false
-      filter_tag:
-        description: 'Tag para filtrar recursos (opcional, formato: key:value)'
-        required: false
+
+env:
+  INFRA_PARAMETERS: "./monitors.tfvars"
+  MAX_RETRIES: 5
+  RETRY_INTERVAL: 30
+  WORKSPACE_NAME: "default"
 
 jobs:
   terraform:
@@ -38,263 +29,127 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup Git
+    - name: Prepare
       run: |
-        git config --global user.name "GitHub Actions Bot"
-        git config --global user.email "actions@github.com"
-
-    - name: Fetch Terraform State
-      run: |
-        echo "Verificando si existe la rama terraform-state..."
-        
-        if git fetch origin terraform-state:terraform-state-temp 2>/dev/null; then
-          echo "La rama terraform-state existe y es accesible."
-          
-          git checkout terraform-state-temp
-          
-          mkdir -p terraform-state
-          
-          if [ -f "terraform.tfstate" ]; then
-            echo "Copiando archivos de estado..."
-            cp terraform.tfstate* terraform-state/
-            git checkout ${{ github.ref_name }}
-            cp terraform-state/terraform.tfstate* ./
-            echo "Estado recuperado correctamente."
-            
-            echo "Contenido del estado:"
-            grep -o '"resources": \[[^]]*\]' terraform.tfstate | head -20 || echo "No se pudo examinar el contenido del estado"
-          else
-            echo "No se encontraron archivos de estado en la rama."
-            git checkout ${{ github.ref_name }}
-          fi
-          
-          git branch -D terraform-state-temp
-        else
-          echo "La rama terraform-state no existe o no es accesible."
-          echo "Se creará una nueva rama de estado después del despliegue."
-          mkdir -p terraform-state
-        fi
+        echo "Preparando el ambiente..."
+        pwd && ls -la
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: 1.0.0
 
-    # Instalar Terraformer si se solicita importación
-    - name: Install Terraformer
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes'
-      run: |
-        echo "Instalando Terraformer..."
-        mkdir -p bin
-        wget -q https://github.com/GoogleCloudPlatform/terraformer/releases/download/$(curl -s https://api.github.com/repos/GoogleCloudPlatform/terraformer/releases/latest | grep tag_name | cut -d '"' -f 4)/terraformer-datadog-linux-amd64 -O bin/terraformer
-        chmod +x bin/terraformer
-        echo "$(pwd)/bin" >> $GITHUB_PATH
-        echo "Terraformer instalado exitosamente:"
-        bin/terraformer version
-
-    # Ejecutar Terraformer para importar recursos
-    - name: Import Resources with Terraformer
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes'
-      run: |
-        echo "Iniciando importación con Terraformer..."
-        
-        # Crear directorio para recursos importados
-        mkdir -p imported
-        cd imported
-        
-        # Definir el tipo de recurso en formato Terraformer
-        RESOURCE_TYPE="${{ github.event.inputs.resource_type }}"
-        
-        # Definir filtros
-        FILTER_ARGS=""
-        if [ -n "${{ github.event.inputs.filter_id }}" ]; then
-          FILTER_ARGS="--filter=id=${{ github.event.inputs.filter_id }}"
-        fi
-        
-        if [ -n "${{ github.event.inputs.filter_tag }}" ]; then
-          FILTER_ARGS="${FILTER_ARGS} --filter=tag=${{ github.event.inputs.filter_tag }}"
-        fi
-        
-        # Ejecutar Terraformer
-        echo "Ejecutando: terraformer import datadog --resources=${RESOURCE_TYPE} ${FILTER_ARGS} --verbose"
-        
-        ../bin/terraformer import datadog \
-          --resources=${RESOURCE_TYPE} \
-          ${FILTER_ARGS} \
-          --token=${{ secrets.DATADOG_SERVICE_API_KEY }} \
-          --app-key=${{ secrets.DATADOG_SERVICE_APP_KEY }} \
-          --api-url="https://api.us5.datadoghq.com/" \
-          --path-pattern="{resource}" \
-          --verbose
-        
-        echo "Importación completada. Recursos generados:"
-        find . -type f -name "*.tf" | sort
-        
-        # Volver al directorio de trabajo
-        cd ..
-      env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
-
-    # Inicializar Terraform para aplicar importaciones
-    - name: Terraform Init After Import
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes'
-      run: terraform init
-      env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-
-    # Importar recursos al estado de Terraform
-    - name: Apply Imports to Terraform State
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes'
-      run: |
-        echo "Aplicando importaciones al estado de Terraform..."
-        
-        # Verificar si hay archivos de importación
-        if [ -d "imported" ] && [ -f "imported/terraform.tfstate" ]; then
-          echo "Encontrado estado de Terraformer, importando recursos..."
-          
-          # Listar recursos en el estado de Terraformer
-          RESOURCES=$(terraform state list -state=imported/terraform.tfstate)
-          
-          if [ -n "$RESOURCES" ]; then
-            echo "Recursos a importar:"
-            echo "$RESOURCES"
-            
-            # Importar cada recurso
-            for RESOURCE in $RESOURCES; do
-              RESOURCE_ID=$(terraform state show -state=imported/terraform.tfstate "$RESOURCE" | grep "id " | head -n 1 | sed 's/^.*= \"\(.*\)\".*$/\1/')
-              if [ -n "$RESOURCE_ID" ]; then
-                echo "Importando $RESOURCE con ID $RESOURCE_ID..."
-                terraform import "$RESOURCE" "$RESOURCE_ID" || echo "Error importando $RESOURCE, continuando..."
-              else
-                echo "No se pudo determinar el ID para $RESOURCE, omitiendo..."
-              fi
-            done
-            
-            echo "Importación al estado de Terraform completada."
-          else
-            echo "No se encontraron recursos para importar."
-          fi
-        else
-          echo "No se encontró el estado de Terraformer, omitiendo la importación."
-        fi
-      env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-
-    # Commit de los cambios
-    - name: Commit Imported Resources
-      if: github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes'
-      run: |
-        cd ..
-        
-        # Verificar si hay archivos para commitear
-        if [ -d "terraform/imported" ] && [ "$(find terraform/imported -name '*.tf' | wc -l)" -gt 0 ]; then
-          echo "Hay archivos para commitear..."
-          
-          # Añadir archivos al staging
-          git add terraform/imported/
-          
-          # Verificar si hay cambios en el staging
-          if git diff --staged --quiet; then
-            echo "No hay cambios para commitear."
-          else
-            # Crear un commit y push
-            git commit -m "feat: Importar recursos de Datadog con Terraformer [skip ci]"
-            git push origin ${{ github.ref_name }}
-            echo "Cambios commiteados y pusheados."
-          fi
-        else
-          echo "No hay archivos para commitear."
-        fi
-
-    - name: Terraform Init
+    - name: Initialize
       id: init
-      run: terraform init
+      run: |
+        # Inicializar Terraform con reintentos
+        initSuccessful=false
+        retryCount=0
+        
+        while [ "$initSuccessful" != "true" ] && [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; do
+          echo "Intento $(($retryCount + 1)) de inicializar y verificar workspace..."
+          
+          # Limpiar cualquier estado previo si existe
+          rm -rf .terraform || true
+          
+          # Inicializar Terraform
+          if terraform init -input=false; then
+            # Verificar si el workspace existe
+            if ! terraform workspace list | grep -q "${{ env.WORKSPACE_NAME }}"; then
+              echo "Creando workspace ${{ env.WORKSPACE_NAME }}..."
+              terraform workspace new "${{ env.WORKSPACE_NAME }}" || true
+            fi
+            
+            # Seleccionar el workspace
+            echo "Seleccionando workspace ${{ env.WORKSPACE_NAME }}..."
+            terraform workspace select "${{ env.WORKSPACE_NAME }}"
+            
+            # Verificar que el workspace está seleccionado correctamente
+            CURRENT_WORKSPACE=$(terraform workspace show)
+            if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
+              echo "Error: No se pudo seleccionar el workspace ${{ env.WORKSPACE_NAME }}"
+              initSuccessful=false
+              retryCount=$((retryCount + 1))
+              
+              if [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; then
+                echo "Esperando ${{ env.RETRY_INTERVAL }} segundos antes de reintentar..."
+                sleep ${{ env.RETRY_INTERVAL }}
+              else
+                echo "Error inicializando Terraform después de ${{ env.MAX_RETRIES }} intentos"
+                exit 1
+              fi
+            else
+              echo "Workspace ${{ env.WORKSPACE_NAME }} seleccionado correctamente"
+              initSuccessful=true
+            fi
+          else
+            retryCount=$((retryCount + 1))
+            
+            if [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; then
+              echo "Intento $retryCount falló. Esperando ${{ env.RETRY_INTERVAL }} segundos antes de reintentar..."
+              sleep ${{ env.RETRY_INTERVAL }}
+            else
+              echo "Error inicializando Terraform después de ${{ env.MAX_RETRIES }} intentos"
+              exit 1
+            fi
+          fi
+        done
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
+        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
 
-    - name: Terraform Validate
-      id: validate
-      run: terraform validate -no-color
-
-    - name: Check Terraform State
-      run: |
-        echo "Comprobando el estado de Terraform..."
-        if [ -f "terraform.tfstate" ]; then
-          echo "El archivo de estado existe."
-          terraform state list || echo "No hay recursos en el estado"
-        else
-          echo "No existe el archivo de estado."
-        fi
-
-    - name: Terraform Plan
+    - name: Plan
       id: plan
-      if: github.event_name == 'pull_request'
-      run: terraform plan -no-color
-      env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
-        TF_VAR_environment: ${{ github.head_ref == 'main' && 'prod' || 'dev' }}
-      continue-on-error: true
-
-    - name: Update Pull Request
-      uses: actions/github-script@v6
-      if: github.event_name == 'pull_request'
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const output = `#### Validación de Terraform: \`${{ steps.validate.outcome }}\`
-          #### Plan de Terraform: \`${{ steps.plan.outcome }}\`
-          
-          <details><summary>Mostrar Plan</summary>
-          
-          \`\`\`
-          ${{ steps.plan.outputs.stdout || steps.plan.outputs.stderr }}
-          \`\`\`
-          
-          </details>`;
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: output
-          })
-
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply -auto-approve
-      env:
-        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
-        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
-        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
-        TF_VAR_environment: 'prod'
-
-    - name: Save Terraform State
-      if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && github.event.inputs.import_resources == 'yes')
       run: |
-        if [ ! -f "terraform.tfstate" ]; then
-          echo "⚠️ No hay archivo de estado para guardar. Algo salió mal."
-          exit 1
+        # Verificar que estamos en el workspace correcto
+        CURRENT_WORKSPACE=$(terraform workspace show)
+        if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
+            echo "Error: Workspace incorrecto"
+            exit 1
         fi
         
-        echo "📝 Guardando el estado actualizado de Terraform..."
+        terraform plan -var-file=${{ env.INFRA_PARAMETERS }}
+      env:
+        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
+        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
+        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
+
+    - name: Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        applySuccessful=false
+        retryCount=0
         
-        mkdir -p terraform-state
-        cp terraform.tfstate* terraform-state/ || echo "Error copiando archivos de estado"
-        
-        git checkout --orphan temp-terraform-state
-        git rm -rf .
-        
-        mv terraform-state/* .
-        git add terraform.tfstate*
-        
-        git commit -m "Update Terraform state [skip ci]" || echo "No hay cambios que commitear"
-        git push -f origin temp-terraform-state:terraform-state
-        
-        echo "✅ Estado guardado correctamente en la rama terraform-state"
+        while [ "$applySuccessful" != "true" ] && [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; do
+          echo "Intento $(($retryCount + 1)) de aplicar cambios..."
+          
+          # Verificar que estamos en el workspace correcto
+          CURRENT_WORKSPACE=$(terraform workspace show)
+          if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
+              echo "Error: Workspace incorrecto"
+              exit 1
+          fi
+          
+          if terraform apply -var-file=${{ env.INFRA_PARAMETERS }} -auto-approve; then
+            applySuccessful=true
+            echo "Apply ejecutado exitosamente"
+          else
+            retryCount=$((retryCount + 1))
+            
+            if [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; then
+              echo "Intento $retryCount de apply falló. Esperando ${{ env.RETRY_INTERVAL }} segundos antes de reintentar..."
+              sleep ${{ env.RETRY_INTERVAL }}
+              
+              terraform init -input=false
+              terraform workspace select "${{ env.WORKSPACE_NAME }}"
+            else
+              echo "Error terraform applying cambios después de ${{ env.MAX_RETRIES }} intentos"
+              exit 1
+            fi
+          fi
+        done
+      env:
+        TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
+        TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
+        TF_VAR_datadog_api_url: "https://api.us5.datadoghq.com/"
