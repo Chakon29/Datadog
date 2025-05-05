@@ -12,7 +12,7 @@ on:
       create_monitor:
         description: 'Crear nuevo monitor'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       monitor_number:
         description: 'Número del nuevo monitor'
@@ -43,7 +43,7 @@ on:
       import_monitor:
         description: 'Importar monitor existente'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       import_monitor_number:
         description: 'Número del monitor a importar'
@@ -91,80 +91,79 @@ jobs:
         cp ./monitors/1_monitor/variables.tf "./monitors/${MONITOR_NUM}_monitor/"
         cp ./monitors/1_monitor/provider.tf "./monitors/${MONITOR_NUM}_monitor/"
         cp ./monitors/1_monitor/output.tf "./monitors/${MONITOR_NUM}_monitor/"
+      
+    - name: Crear Archivo main.tf
+      run: |
+        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
+        MONITOR_NAME="${{ github.event.inputs.monitor_name }}"
+        MONITOR_TITLE="${{ github.event.inputs.monitor_title }}"
+        MONITOR_QUERY="${{ github.event.inputs.monitor_query }}"
+        CRITICAL="${{ github.event.inputs.critical_threshold }}"
+        WARNING="${{ github.event.inputs.warning_threshold }}"
+        PROJECT_ID="${{ env.PROJECT_ID }}"
         
-        # Crear el archivo main.tf para el nuevo monitor
-        cat > "./monitors/${MONITOR_NUM}_monitor/main.tf" << 'EOF'
-resource "datadog_monitor" "$MONITOR_NAME" {
-  include_tags = false
-  new_group_delay = 60
-  notify_audit = true
-  require_full_window = false
-  monitor_thresholds {
-    critical = $CRITICAL
-    warning = $WARNING
-  }
-  name = "$MONITOR_TITLE"
-  type = "query alert"
-  query = <<EOT
-$MONITOR_QUERY
-EOT
-  message = <<EOT
-@team-teleton 
-ALERTA: $MONITOR_TITLE en {{host.name}} - {{value}}%
-
-Detalles:
-- Host: {{host.name}}
-- Valor: {{value}}%
-- Proyecto: $PROJECT_ID
-- Timestamp: {{last_triggered_at}}
-EOT
-}
-EOF
-
-        # Reemplazar variables en el archivo generado
-        sed -i "s/\$MONITOR_NAME/${MONITOR_NAME}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        sed -i "s/\$CRITICAL/${CRITICAL}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        sed -i "s/\$WARNING/${WARNING}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        sed -i "s/\$MONITOR_TITLE/${MONITOR_TITLE}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        sed -i "s/\$MONITOR_QUERY/${MONITOR_QUERY}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        sed -i "s/\$PROJECT_ID/${PROJECT_ID}/g" "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        # Escribir el contenido línea por línea
+        echo 'resource "datadog_monitor" "'$MONITOR_NAME'" {' > "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  include_tags = false' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  new_group_delay = 60' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  notify_audit = true' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  require_full_window = false' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  monitor_thresholds {' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '    critical = '$CRITICAL >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '    warning = '$WARNING >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  }' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  name = "'$MONITOR_TITLE'"' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  type = "query alert"' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  query = <<EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo "$MONITOR_QUERY" >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo 'EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '  message = <<EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '@team-teleton ' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo 'ALERTA: '$MONITOR_TITLE' en {{host.name}} - {{value}}%' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo 'Detalles:' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '- Host: {{host.name}}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '- Valor: {{value}}%' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '- Proyecto: '$PROJECT_ID >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '- Timestamp: {{last_triggered_at}}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo 'EOT' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
+        echo '}' >> "./monitors/${MONITOR_NUM}_monitor/main.tf"
         
-        # Actualizar monitors.tfvars para incluir el nuevo monitor
-        # Primero respaldamos el archivo
-        cp monitors.tfvars monitors.tfvars.bak
-        
-        # Extraer el contenido actual y reformatearlo con el nuevo monitor
-        echo 'monitor_params = [' > monitors.tfvars
-        
-        # Añadir los monitores existentes
-        grep -oP '\{\s*"monitor_id":"[^"]+",\s*"monitor_path":\s*"[^"]+"\s*\}' monitors.tfvars.bak | while read -r line; do
-          echo -e "\t$line," >> monitors.tfvars
-        done
-        
-        # Añadir el nuevo monitor
-        echo -e "\t{" >> monitors.tfvars
-        echo -e "\t\t\"monitor_id\":\"${MONITOR_NUM}\"," >> monitors.tfvars
-        echo -e "\t\t\"monitor_path\": \"./monitors/${MONITOR_NUM}_monitor/main.tf\"" >> monitors.tfvars
-        echo -e "\t}" >> monitors.tfvars
-        echo -e "    ]" >> monitors.tfvars
-        
-        # Actualizar main.tf para incluir el nuevo módulo
-        echo -e "\nmodule \"monitor_${MONITOR_NUM}\" {" >> main.tf
-        echo -e "\tsource = \"./monitors/${MONITOR_NUM}_monitor\"" >> main.tf
-        echo -e "\tproviders = {" >> main.tf
-        echo -e "\t\tdatadog = datadog" >> main.tf
-        echo -e "\t}" >> main.tf
-        echo -e "\tmonitor_params = [var.monitor_params[$(( $MONITOR_NUM - 1 ))]]" >> main.tf
-        echo -e "}" >> main.tf
-        
-        # Mostrar los cambios
-        echo "Estructura de carpetas creada:"
-        ls -la "./monitors/${MONITOR_NUM}_monitor/"
-        echo "Archivo main.tf del monitor:"
         cat "./monitors/${MONITOR_NUM}_monitor/main.tf"
-        echo "Archivo monitors.tfvars actualizado:"
+    
+    - name: Actualizar monitors.tfvars
+      run: |
+        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
+        # Crear archivo temporal
+        echo 'monitor_params = [' > monitors.tfvars.new
+        # Extraer los monitores existentes del archivo original
+        grep -o '{[^}]*}' monitors.tfvars | while read line; do
+          echo "	$line," >> monitors.tfvars.new
+        done
+        # Añadir el nuevo monitor
+        echo '	{' >> monitors.tfvars.new
+        echo '		"monitor_id":"'$MONITOR_NUM'",' >> monitors.tfvars.new
+        echo '		"monitor_path": "./monitors/'$MONITOR_NUM'_monitor/main.tf"' >> monitors.tfvars.new
+        echo '	}' >> monitors.tfvars.new
+        echo '    ]' >> monitors.tfvars.new
+        # Reemplazar el archivo original
+        mv monitors.tfvars.new monitors.tfvars
+        
         cat monitors.tfvars
-        echo "Archivo main.tf actualizado:"
+    
+    - name: Actualizar main.tf
+      run: |
+        MONITOR_NUM="${{ github.event.inputs.monitor_number }}"
+        # Añadir el nuevo módulo al final del archivo
+        echo '' >> main.tf
+        echo 'module "monitor_'$MONITOR_NUM'" {' >> main.tf
+        echo '	source = "./monitors/'$MONITOR_NUM'_monitor"' >> main.tf
+        echo '	providers = {' >> main.tf
+        echo '		datadog = datadog' >> main.tf
+        echo '	}' >> main.tf
+        echo '	monitor_params = [var.monitor_params['$(($MONITOR_NUM - 1))']' >> main.tf
+        echo '}' >> main.tf
+        
         cat main.tf
     
     - name: Configurar Git
