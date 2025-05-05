@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  INFRA_PARAMETERS: "./terraform/monitors.tfvars"
+  INFRA_PARAMETERS: "monitors.tfvars"
   MAX_RETRIES: 5
   RETRY_INTERVAL: 30
 
