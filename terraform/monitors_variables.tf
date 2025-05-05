@@ -1,4 +1,4 @@
-variable "monitor_params" {
+variable "monitor_parametros" {
   type = list(object({
     monitor_id = optional(string)
     name_cm = optional(string)
