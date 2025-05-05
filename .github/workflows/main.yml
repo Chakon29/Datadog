@@ -13,7 +13,6 @@ env:
   INFRA_PARAMETERS: "./monitors.tfvars"
   MAX_RETRIES: 5
   RETRY_INTERVAL: 30
-  WORKSPACE_NAME: "default"
 
 jobs:
   terraform:
@@ -47,41 +46,14 @@ jobs:
         retryCount=0
         
         while [ "$initSuccessful" != "true" ] && [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; do
-          echo "Intento $(($retryCount + 1)) de inicializar y verificar workspace..."
+          echo "Intento $(($retryCount + 1)) de inicializar Terraform..."
           
           # Limpiar cualquier estado previo si existe
           rm -rf .terraform || true
           
-          # Inicializar Terraform
           if terraform init -input=false; then
-            # Verificar si el workspace existe
-            if ! terraform workspace list | grep -q "${{ env.WORKSPACE_NAME }}"; then
-              echo "Creando workspace ${{ env.WORKSPACE_NAME }}..."
-              terraform workspace new "${{ env.WORKSPACE_NAME }}" || true
-            fi
-            
-            # Seleccionar el workspace
-            echo "Seleccionando workspace ${{ env.WORKSPACE_NAME }}..."
-            terraform workspace select "${{ env.WORKSPACE_NAME }}"
-            
-            # Verificar que el workspace está seleccionado correctamente
-            CURRENT_WORKSPACE=$(terraform workspace show)
-            if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
-              echo "Error: No se pudo seleccionar el workspace ${{ env.WORKSPACE_NAME }}"
-              initSuccessful=false
-              retryCount=$((retryCount + 1))
-              
-              if [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; then
-                echo "Esperando ${{ env.RETRY_INTERVAL }} segundos antes de reintentar..."
-                sleep ${{ env.RETRY_INTERVAL }}
-              else
-                echo "Error inicializando Terraform después de ${{ env.MAX_RETRIES }} intentos"
-                exit 1
-              fi
-            else
-              echo "Workspace ${{ env.WORKSPACE_NAME }} seleccionado correctamente"
-              initSuccessful=true
-            fi
+            initSuccessful=true
+            echo "Terraform inicializado correctamente"
           else
             retryCount=$((retryCount + 1))
             
@@ -102,13 +74,6 @@ jobs:
     - name: Plan
       id: plan
       run: |
-        # Verificar que estamos en el workspace correcto
-        CURRENT_WORKSPACE=$(terraform workspace show)
-        if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
-            echo "Error: Workspace incorrecto"
-            exit 1
-        fi
-        
         terraform plan -var-file=${{ env.INFRA_PARAMETERS }}
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
@@ -124,13 +89,6 @@ jobs:
         while [ "$applySuccessful" != "true" ] && [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; do
           echo "Intento $(($retryCount + 1)) de aplicar cambios..."
           
-          # Verificar que estamos en el workspace correcto
-          CURRENT_WORKSPACE=$(terraform workspace show)
-          if [ "$CURRENT_WORKSPACE" != "${{ env.WORKSPACE_NAME }}" ]; then
-              echo "Error: Workspace incorrecto"
-              exit 1
-          fi
-          
           if terraform apply -var-file=${{ env.INFRA_PARAMETERS }} -auto-approve; then
             applySuccessful=true
             echo "Apply ejecutado exitosamente"
@@ -142,7 +100,6 @@ jobs:
               sleep ${{ env.RETRY_INTERVAL }}
               
               terraform init -input=false
-              terraform workspace select "${{ env.WORKSPACE_NAME }}"
             else
               echo "Error terraform applying cambios después de ${{ env.MAX_RETRIES }} intentos"
               exit 1
