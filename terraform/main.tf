@@ -3,7 +3,7 @@ import {
 	id = "1"
 }
 
-module "simple_monitor_148065962" {
+module "monitor_1" {
 	source = "./monitors/1_monitor"
 	providers = {
 		datadog = datadog
