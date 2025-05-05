@@ -13,7 +13,7 @@ module "monitor_1" {
 
 
  import {
-   to = module.monitor_1.datadog_monitor.VM_GCP_Uso_de_disco_Critical
+   to = module.monitor_2.datadog_monitor.VM_GCP_Uso_de_disco_Critical
    id = "36164091"
  }
  
