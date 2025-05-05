@@ -16,5 +16,5 @@ variable "monitor_params" {
     monitor_renotify_s = optional(list(string))
     monitor_notify_nodata = optional(bool)
   }))
-  default = []
+  default = null
 }

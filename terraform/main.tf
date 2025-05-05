@@ -1,14 +1,12 @@
-terraform {
-  required_providers {
-    datadog = {
-      source  = "DataDog/datadog"
-      version = "~> 3.20.0"
-    }
-  }
+import {
+	to = module.monitor_1.datadog_monitor.already_monitor
+	id = "1"
 }
 
-provider "datadog" {
-  api_key = var.datadog_api_key
-  app_key = var.datadog_app_key
-  api_url = var.datadog_api_url
+module "simple_monitor_148065962" {
+	source = "./monitors/1_monitor"
+	providers = {
+		datadog = datadog
+	}
+	monitor_params = var.monitor_params[0]
 }

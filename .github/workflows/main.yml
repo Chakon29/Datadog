@@ -10,6 +10,7 @@ on:
   workflow_dispatch:
 
 env:
+  INFRA_PARAMETERS: "./monitors.tfvars"
   MAX_RETRIES: 5
   RETRY_INTERVAL: 30
 
@@ -73,7 +74,7 @@ jobs:
     - name: Plan
       id: plan
       run: |
-        terraform plan
+        terraform plan -var-file=${{ env.INFRA_PARAMETERS }}
       env:
         TF_VAR_datadog_api_key: ${{ secrets.DATADOG_SERVICE_API_KEY }}
         TF_VAR_datadog_app_key: ${{ secrets.DATADOG_SERVICE_APP_KEY }}
@@ -88,7 +89,7 @@ jobs:
         while [ "$applySuccessful" != "true" ] && [ $retryCount -lt ${{ env.MAX_RETRIES }} ]; do
           echo "Intento $(($retryCount + 1)) de aplicar cambios..."
           
-          if terraform apply -auto-approve; then
+          if terraform apply -var-file=${{ env.INFRA_PARAMETERS }} -auto-approve; then
             applySuccessful=true
             echo "Apply ejecutado exitosamente"
           else
