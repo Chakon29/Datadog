@@ -1,5 +1,5 @@
 import {
-  to = module.monitor_1.datadog_monitor.VM_GCP_Uso_de_disco_Critical_111
+  to = module.monitor_1.datadog_monitor.vm_gcp_monitor
   id = "3616409"
 }
 
@@ -13,7 +13,7 @@ module "monitor_1" {
 
 
 import {
-   to = module.monitor_2.datadog_monitor.VM_GCP_Uso_de_disco_Critical
+   to = module.monitor_2.datadog_monitor.vm_gcp_monitor
    id = "36164091"
  }
  
