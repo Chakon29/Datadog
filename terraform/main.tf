@@ -1,6 +1,6 @@
 import {
   to = module.monitor_1.datadog_monitor.vm_gcp_monitor
-  id = "3616409"
+  id = "4227317"
 }
 
 module "monitor_1" {
@@ -14,7 +14,7 @@ module "monitor_1" {
 
 import {
    to = module.monitor_2.datadog_monitor.vm_gcp_monitor
-   id = "36164091"
+   id = "4227286"
  }
  
  module "monitor_2" {
