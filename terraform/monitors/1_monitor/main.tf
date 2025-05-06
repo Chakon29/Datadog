@@ -7,10 +7,10 @@ resource "datadog_monitor" "vm_gcp_monitor" {
     critical = 90
     warning = 80
   }
-  name = "[VM GCP] Uso de disco :: Critical 111"
+  name = "[VM GCP] Uso de disco :: Cmritical 1"
   type = "query alert"
   query = <<EOT
-avg(last_5m):100 * ( max:system.disk.used{project:ancient-tractor-452505-b5} by {host} / max:system.disk.total{project:ancient-tractor-452505-b5} by {host} ) > 90
+avg(last_10m):100 * ( max:system.disk.used{project:ancient-tractor-452505-b5} by {host} / max:system.disk.total{project:ancient-tractor-452505-b5} by {host} ) > 90
 EOT
   message = <<EOT
 @team-teleton 
