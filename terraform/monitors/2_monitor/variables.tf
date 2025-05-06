@@ -14,7 +14,6 @@ variable "monitor_params" {
 		new_group_delay = number
 		monitor_tags = list(string)
 		no_data_fr = number
-		include_tags = bool
 		monitor_renotify_s = list(string)
 		monitor_renotify_o = number
 		monitor_notify_nodata = bool
